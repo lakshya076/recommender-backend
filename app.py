@@ -2,7 +2,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pickle
 
+
 app = Flask(__name__)
+CORS(app)
 
 with open("data/recommendations.pkl", "rb") as file:
     recommendations = pickle.load(file)
