@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pickle
-
+from concurrent.futures import ThreadPoolExecutor
 from helper import get_movie_metadata
 
 app = Flask(__name__)
@@ -52,15 +52,20 @@ def single_metadata(movie_id):
     return jsonify(data)
 
 
-@app.route("/metadata_batch", methods=["POST"])
+@app.route('/metadata_batch', methods=["POST"])
 def batch_metadata():
     movie_ids = request.json.get("movie_ids", [])
     results = []
 
-    for movie_id in movie_ids:
-        data = get_movie_metadata(movie_id)
-        if "error" not in data:
-            results.append(data)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        # Submit all jobs in parallel
+        future_to_id = {executor.submit(get_movie_metadata, mid): mid for mid in movie_ids}
+
+        for future in future_to_id:
+            data = future.result()
+            if data:
+                results.append(data)
+
     return jsonify(results)
 
 
