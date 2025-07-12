@@ -2,13 +2,17 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pickle
 from concurrent.futures import ThreadPoolExecutor
+from difflib import get_close_matches
 from helper import get_movie_metadata
 
 app = Flask(__name__)
 CORS(app)
 
-with open("data/recommendations.pkl", "rb") as file:
-    recommendations = pickle.load(file)
+with open("data/recommendations.pkl", "rb") as f1:
+    recommendations = pickle.load(f1)
+
+with open("data/horror_dict.pkl", "rb") as f2:
+    movie_dict = pickle.load(f2)
 
 
 @app.route('/recommend', methods=['POST'])
@@ -67,6 +71,25 @@ def batch_metadata():
                 results.append(data)
 
     return jsonify(results)
+
+
+@app.route('/search/<string:query>', methods=["GET"])
+def search_movie(query):
+    query_lower = query.lower()
+
+    # Try to find the closest match
+    matches = get_close_matches(query_lower, movie_dict.keys(), n=1, cutoff=0.65)
+
+    if matches:
+        match = matches[0]
+        movie_id = movie_dict[match]
+        return jsonify({
+            "query": query,
+            "matched_title": match,
+            "id": movie_id
+        })
+    else:
+        return jsonify({"error": f"No close match found for '{query}'"}), 404
 
 
 if __name__ == '__main__':
