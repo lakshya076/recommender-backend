@@ -2,12 +2,14 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pickle
 
+from helper import get_movie_metadata
 
 app = Flask(__name__)
 CORS(app)
 
 with open("data/recommendations.pkl", "rb") as file:
     recommendations = pickle.load(file)
+
 
 @app.route('/recommend', methods=['POST'])
 def recommend():
@@ -42,6 +44,24 @@ def recommend():
 def get_movies():
     movie_ids = list(recommendations.keys())[:10]
     return jsonify({'available_movie_ids': movie_ids, 'total_movies': len(recommendations)})
+
+
+@app.route("/metadata/<int:movie_id>")
+def single_metadata(movie_id):
+    data = get_movie_metadata(movie_id)
+    return jsonify(data)
+
+
+@app.route("/metadata_batch", methods=["POST"])
+def batch_metadata():
+    movie_ids = request.json.get("movie_ids", [])
+    results = []
+
+    for movie_id in movie_ids:
+        data = get_movie_metadata(movie_id)
+        if "error" not in data:
+            results.append(data)
+    return jsonify(results)
 
 
 if __name__ == '__main__':
